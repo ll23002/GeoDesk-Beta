@@ -6,7 +6,6 @@ import sys
 import os
 import logging
 
-# Configurar logging para que los mensajes de los routers aparezcan en los logs
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s: [%(name)s] %(message)s",
@@ -18,7 +17,7 @@ from routes.solicitar_imagenes_automatico import router as solicitar_imagenes_ro
 from routes.mintpy_analysis import router as mintpy_router
 from routes.eq_insar import router as eq_insar_router
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 app = FastAPI(title="MyApp API", version="0.1.0")
 
 raw_cors_origins = os.getenv(

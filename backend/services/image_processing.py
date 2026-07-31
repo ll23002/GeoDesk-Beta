@@ -145,7 +145,7 @@ def generar_mapa_el_salvador(ruta_tif: Path, salida_png: Path):
 def generar_imagen_sin_mapa(data, extent, outfile):
     masked = np.where(np.isfinite(data), data, np.nan)
     if np.isnan(masked).all():
-        print("⚠️ La imagen no contiene datos visibles.")
+        print("La imagen no contiene datos visibles.")
         return
 
     plt.figure(figsize=(10, 6))
