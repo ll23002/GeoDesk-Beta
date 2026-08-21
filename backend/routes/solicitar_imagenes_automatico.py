@@ -53,9 +53,6 @@ INCLUDE_LOOK_VECTORS = True
 LOOKS = "20x4"
 
 
-# =========================
-#  TIPOS / MODELOS
-# =========================
 @dataclass
 class SolicitudAutoIn:
     start_date: str   # ISO-8601

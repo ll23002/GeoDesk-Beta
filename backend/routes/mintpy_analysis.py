@@ -31,7 +31,6 @@ from scipy.interpolate import griddata
 # We monkey-patch the estimate_timeseries function globally here to prevent multi-patching
 # across sequential API calls.
 from mintpy.ifgram_inversion import estimate_timeseries as original_estimate_timeseries
-
 def patched_estimate_timeseries(*args, **kwargs):
     tsi, inv_quali, num_obsi = original_estimate_timeseries(*args, **kwargs)
     if getattr(inv_quali, "size", 0) == 1:
@@ -58,7 +57,6 @@ SESSION_BASE = Path("/tmp/mintpy_sessions")
 SESSION_BASE.mkdir(parents=True, exist_ok=True)
 
 def generate_phase_previews(active_work_dir: Path, active_zip_dir: Path, igram_meta_list: List[dict]):
-    """Generates wrapped, unwrapped, and corrected phase images for a representative pair."""
     if not igram_meta_list:
         logging.warning("No interferogram metadata list provided for phase previews.")
         return None
@@ -156,7 +154,6 @@ def generate_phase_previews(active_work_dir: Path, active_zip_dir: Path, igram_m
                         # Apply mask: where infinite, otherwise NaN
                         corrected_disp = np.where(np.isfinite(corrected_disp) & (corrected_disp != 0.0), corrected_disp, np.nan)
                         
-                        # Set matplotlib backend to Agg
                         import matplotlib
                         matplotlib.use("Agg")
                         import matplotlib.pyplot as plt
@@ -171,7 +168,6 @@ def generate_phase_previews(active_work_dir: Path, active_zip_dir: Path, igram_m
                         ax.set_title(f"Deformación Corregida (SBAS MintPy)\n{first_pair['date1']} a {first_pair['date2']}", fontsize=12, color="white", pad=12)
                         ax.axis("off")
                         
-                        # Modern dark background styling
                         fig.patch.set_facecolor('#0f172a')
                         ax.set_facecolor('#0f172a')
                         
@@ -208,6 +204,7 @@ async def upload_file(session_id: str = Form(...), file: UploadFile = File(...))
     session_dir.mkdir(parents=True, exist_ok=True)
     file_path = session_dir / (file.filename or "interferogram.zip")
     with file_path.open("wb") as f:
+        # probablemente lo cambie para el servidor
         while chunk := await file.read(8192 * 1024):  # 8MB chunk buffer
             f.write(chunk)
     return {"success": True, "filename": file.filename}
@@ -432,13 +429,11 @@ def _compute_hyp3_velocity(
     if not los_files:
         return {"hyp3_has_data": False}
 
-    # ------------------------------------------------------------------
     # Build reference grid.
     # Priority: (1) MintPy output grid (regular WGS84 — identical visual pattern),
     #           (2) downsampled native UTM grid from los_disp.tif (fallback).
     # Using MintPy's grid ensures HyP3 points are sampled at the exact same
     # lat/lon positions as the SBAS result, making side-by-side comparison valid.
-    # ------------------------------------------------------------------
     import rasterio.crs as _rcrs
     from rasterio.transform import from_bounds as _from_bounds
 
@@ -664,9 +659,7 @@ def _compute_hyp3_velocity(
     if not vel_stacks_los:
         return {"hyp3_has_data": False}
 
-    # ------------------------------------------------------------------
-    # Weighted median across interferograms per pixel
-    # ------------------------------------------------------------------
+
     import time as _time
     w_arr = np.array(weights, dtype=np.float32)  # (N,)
     logging.info("[HyP3] Computing weighted median on %d stacks of shape %s...",
@@ -708,9 +701,7 @@ def _compute_hyp3_velocity(
         vel_med_vert = _weighted_median_stack(vel_stacks_vert, w_arr)
         logging.info("[HyP3] VERT weighted median done")
 
-    # ------------------------------------------------------------------
-    # Build output points — apply crop mask if provided
-    # ------------------------------------------------------------------
+
     valid_mask = np.isfinite(vel_primary)
 
     # If the user selected an AOI crop, restrict HyP3 output to the same region.

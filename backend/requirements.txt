@@ -70,3 +70,5 @@ h5py>=3.10.0
 mintpy>=1.6.0
 eq-insar>=0.1.1
 psutil==7.2.2
+celery>=5.4.0
+redis>=5.0.0

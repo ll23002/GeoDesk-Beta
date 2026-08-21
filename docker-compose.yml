@@ -1,4 +1,20 @@
 services:
+  # Redis
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend
   backend:
     build:
       context: ./backend
@@ -6,8 +22,15 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - geodesk_jobs:/app/job_status
+      - geodesk_results:/app/mintpy_results
     expose:
       - "8000"
+    depends_on:
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
@@ -22,3 +45,8 @@ services:
       - "80"
     depends_on:
       - backend
+
+volumes:
+  redis_data:
+  geodesk_jobs:
+  geodesk_results:
