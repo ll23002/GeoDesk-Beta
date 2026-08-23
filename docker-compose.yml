@@ -1,8 +1,8 @@
 services:
-  # Redis
+  # Redis/Celery
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
+    restart: always
     command: redis-server --save 60 1 --loglevel warning
     volumes:
       - redis_data:/data
@@ -14,31 +14,70 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backend
+  # Backend (FastAPI / Uvicorn)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
+    restart: always
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379/0
     volumes:
+      # job_status
       - geodesk_jobs:/app/job_status
+      # mintpy_results
       - geodesk_results:/app/mintpy_results
+      # alaska_descargas
+      - geodesk_downloads:/app/alaska_descargas
+      # Sesiones ad-hoc
+      - geodesk_adhoc:/tmp/geodesk_adhoc_sessions
+    cpuset: "5,6,7"
     expose:
       - "8000"
     depends_on:
       redis:
         condition: service_healthy
 
+  # Celery Worker
+  # Usa la misma imagen que el backend pero arranca Celery en lugar de Uvicorn.
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    command: >
+      celery
+      --app=celery_app.celery_app
+      worker
+      --queues=geodesk_heavy
+      --concurrency=5
+      --loglevel=INFO
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./backend/.env
+    volumes:
+      - geodesk_jobs:/app/job_status
+      - geodesk_results:/app/mintpy_results
+      - geodesk_downloads:/app/alaska_descargas
+      - geodesk_adhoc:/tmp/geodesk_adhoc_sessions
+    cpuset: "0,1,2,3,4"
+    mem_limit: 12g
+    memswap_limit: 12g
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Frontend (Nginx + React/Vite)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=/geo-desk
-    restart: unless-stopped
+    restart: always
     environment:
       - BACKEND_UPSTREAM=backend:8000
     expose:
@@ -50,3 +89,5 @@ volumes:
   redis_data:
   geodesk_jobs:
   geodesk_results:
+  geodesk_downloads:
+  geodesk_adhoc:

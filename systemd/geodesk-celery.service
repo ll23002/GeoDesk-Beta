@@ -1,63 +1,37 @@
 [Unit]
-Description=GeoDesk-Beta — Worker Celery (Geoprocesamiento InSAR / MintPy)
-Documentation=https://docs.celeryq.dev/
-After=network.target redis.service
-Requires=redis.service
+Description=GeoDesk-Beta — Plataforma de Monitoreo Geodésico InSAR (Docker Compose)
+# Solo arranca una vez que Docker está completamente operativo
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
 
 [Service]
-# Usuario y grupo de ejecución
+# Tipo de servicio
+# "oneshot" con RemainAfterExit le indica a Systemd que el proceso de arranque
+# termina (docker compose up -d corre y sale), pero el servicio se considera
+# activo mientras los contenedores estén corriendo.
+Type=oneshot
+RemainAfterExit=yes
+
+# Usuario de ejecución
+# El usuario debe pertenecer al grupo "docker" para poder ejecutar comandos Docker
+# sin sudo. Ejecutar: sudo usermod -aG docker <usuario>
 User=geociencias
 Group=geociencias
 
-# Directorio de trabajo
-WorkingDirectory=/home/geociencias/GeoDesk-Beta/backend
+# Directorio del proyecto
+# Debo arreglar esto
+WorkingDirectory=/home/geociencias/GeoDesk-Beta
 
-# Variables de entorno
-EnvironmentFile=/home/geociencias/GeoDesk-Beta/backend/.env
-Environment="PATH=/home/geociencias/GeoDesk-Beta/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONUNBUFFERED=1"
+# Comandos de inicio y parada
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
 
-# Comando de arranque del worker
-# --app         : Módulo de Celery (celery_app.py)
-# --queues      : Solo consume de la cola de tareas pesadas
-# --concurrency : 5 procesos = núcleos 0-4
-# --loglevel    : Nivel de registro para el sistema de logs de Linux
-ExecStart=/home/geociencias/GeoDesk-Beta/backend/.venv/bin/celery \
-    --app=celery_app.celery_app \
-    worker \
-    --queues=geodesk_heavy \
-    --concurrency=5 \
-    --loglevel=INFO \
-    --logfile=/var/log/geodesk/celery-worker.log \
-    --pidfile=/run/geodesk/celery-worker.pid
+# Política de reinicio
+Restart=on-failure
+RestartSec=10s
 
-# Anclaje de núcleos CPU (CPU Affinity)
-# Restringe el worker a los núcleos especificados del procesador.
-CPUAffinity=0 1 2 3 4
-
-# Reinicio automático (Systemd Guardrail)
-# Si el worker muere por cualquier motivo (OOM Killer, microcorte, fallo),
-# Systemd lo reinicia automáticamente en menos de 5 segundos.
-Restart=always
-RestartSec=5s
-
-# Límite de memoria
-# Celery mata el proceso hijo si supera 11 GB de RAM.
-MemoryMax=12G
-
-# Archivos y directorios necesarios
-RuntimeDirectory=geodesk
-LogsDirectory=geodesk
-
-# Seguridad del proceso
-# Previene que el worker pueda escalar privilegios accidentalmente.
-NoNewPrivileges=true
-PrivateTmp=false
-
-# Timeout
-# Espera hasta 60 s para que el worker termine la tarea en curso
-# antes de forzar la terminación en un reinicio del servidor.
-TimeoutStopSec=60
+TimeoutStartSec=300
 
 [Install]
 WantedBy=multi-user.target

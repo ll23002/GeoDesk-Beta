@@ -72,3 +72,7 @@ eq-insar>=0.1.1
 psutil==7.2.2
 celery>=5.4.0
 redis>=5.0.0
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
+python-multipart>=0.0.6
+pyarrow>=14.0.0
