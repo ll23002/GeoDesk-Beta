@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Navbar from "./components/Navbar";
 import BarraSuperior from "./components/BarraSuperior";
+import JobStatusPanel from "./components/JobStatusPanel";
+import DiskStatusWidget from "./components/DiskStatusWidget";
 
 import AlaskaSearch from "./pages/Alaska/AlaskaSearch";
 import type { PathFrameOption } from "./pages/Alaska/MapComponent";
@@ -430,6 +432,8 @@ const AppInner: React.FC = () => {
 const App: React.FC = () => (
   <AuthProvider>
     <AppInner />
+    {/* Panel flotante de estado de tareas — visible globalmente en toda la app */}
+    <JobStatusPanel />
   </AuthProvider>
 );
 

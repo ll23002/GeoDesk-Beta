@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import ScientificVisualizationPanel from "./ScientificVisualizationPanel";
 import axios from "axios";
 import api, { apiFormData, API_URL } from "../../services/api";
 import {
@@ -2278,6 +2279,10 @@ export default function MintPyAnalysis() {
           </div>
         </div>
       )}
+      {/* ── Visualización Científica Paso a Paso ────────────────────────────────── */}
+      <div style={{ marginTop: "32px" }}>
+        <ScientificVisualizationPanel />
+      </div>
     </div>
   );
 }
