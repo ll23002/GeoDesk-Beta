@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Navbar from "./components/Navbar";
 import BarraSuperior from "./components/BarraSuperior";
 import JobStatusPanel from "./components/JobStatusPanel";
-import DiskStatusWidget from "./components/DiskStatusWidget";
+
 
 import AlaskaSearch from "./pages/Alaska/AlaskaSearch";
 import type { PathFrameOption } from "./pages/Alaska/MapComponent";
