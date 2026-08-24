@@ -10,8 +10,10 @@ celery_app = Celery(
     "geodesk",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["tasks.processing_tasks"],
+    include=["tasks.processing_tasks", "tasks.automated_pipeline", "tasks.orchestrator"],
 )
+
+from celery.schedules import crontab
 
 celery_app.conf.update(
     task_serializer="json",
@@ -24,23 +26,32 @@ celery_app.conf.update(
     worker_concurrency=5,
     worker_prefetch_multiplier=1, # 1 tarea por proceso para evitar starvation
 
-    # Solo 1 tarea pesada activa a la vez: se usa solo la queue "geodesk_heavy".
-    # Tareas adicionales se encolan automáticamente y esperan su turno.
     task_default_queue="geodesk_heavy",
     task_routes={
         "tasks.processing_tasks.*": {"queue": "geodesk_heavy"},
+        "tasks.automated_pipeline.*": {"queue": "geodesk_heavy"},
+        "tasks.orchestrator.*": {"queue": "geodesk_heavy"},
     },
 
     result_expires=86400 * 7, # por que tanto tiempo?
 
     # Si un proceso hijo supera 11 GB de RAM, Celery lo reinicia limpiamente
-    # antes de que Linux OOM-killer lo mate de forma abrupta.
     worker_max_memory_per_child=11 * 1024 * 1024,  # 11 GB en KB
 
-    # Re-encolar tareas si el worker muere antes de finalizar
     task_acks_late=True,
     task_reject_on_worker_lost=True,
 
-    # Visibilidad de tareas para el frontend
     task_track_started=True,
+    
+    # Cron Jobs
+    beat_schedule={
+        "actualizacion-mensual-insar": {
+            "task": "tasks.orchestrator.monthly_cron_update",
+            "schedule": crontab(day_of_month="1", hour="0", minute="0"),
+        },
+        "verificar-historico-arranque": {
+            "task": "tasks.orchestrator.bootstrap_historical",
+            "schedule": 300.0, 
+        }
+    }
 )

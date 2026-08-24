@@ -1601,7 +1601,8 @@ async def process_interferograms(
             mask_a = np.isfinite(vel_asc)
             mask_d = np.isfinite(vel_desc)
             
-            valid = mask_a & mask_d & (det != 0) & np.isfinite(det)
+            det_threshold = 0.1
+            valid = mask_a & mask_d & (np.abs(det) > det_threshold) & np.isfinite(det)
             vel_ew = np.full_like(vel_desc, np.nan)
             vel_up = np.full_like(vel_desc, np.nan)
             vel_ew[valid] = (A_desc_up[valid] * vel_asc[valid] - A_asc_up[valid] * vel_desc[valid]) / det[valid]

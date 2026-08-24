@@ -146,7 +146,6 @@ def acquire_date(scene: Any) -> Optional[datetime]:
         return None
 
 
-#  UTILIDADES PROYECTO
 def _sanear_nombre_proyecto(raw: Optional[str]) -> str:
     if not raw or not raw.strip():
         return NOMBRE_PROYECTO_POR_DEFECTO
@@ -174,12 +173,12 @@ def _validar_nombre_proyecto_unico(
 
 
 #  LÓGICA PRINCIPAL
-def search_scenes(start_iso: str, end_iso: str, ruta: int = 128, marco: int = 547, direction: Optional[str] = None) -> List[Any]:
+def search_scenes(start_iso: str, end_iso: str, ruta: int = 128, marco: int = 547, direction: Optional[str] = None, polygon: Optional[str] = None) -> List[Any]:
     kwargs = {
         "platform": PLATFORM,
         "processingLevel": PROC_LEVEL,
         "beamMode": BEAM_MODE,
-        "intersectsWith": POLYGON,
+        "intersectsWith": polygon or POLYGON,
         "start": start_iso,
         "end": end_iso,
         "relativeOrbit": ruta,
@@ -382,7 +381,6 @@ def solicitar_imagenes_automatico(
     return response
 
 
-# Ejecución directa
 if __name__ == "__main__":
     ejemplo = SolicitudAutoIn(
         start_date="2024-02-01T00:00:00Z",
