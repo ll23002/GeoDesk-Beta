@@ -40,7 +40,6 @@ services:
         condition: service_healthy
 
   # Celery Worker
-  # Usa la misma imagen que el backend pero arranca Celery en lugar de Uvicorn.
   celery-worker:
     build:
       context: ./backend
@@ -57,8 +56,10 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379/0
-    env_file:
-      - ./backend/.env
+      - HYP3_USERNAME=${HYP3_USERNAME}
+      - HYP3_PASSWORD=${HYP3_PASSWORD}
+      - ERA5_KEY=${ERA5_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     volumes:
       - geodesk_jobs:/app/job_status
       - geodesk_results:/app/mintpy_results
