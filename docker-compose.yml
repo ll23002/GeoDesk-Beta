@@ -23,6 +23,10 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - HYP3_USERNAME=${HYP3_USERNAME}
+      - HYP3_PASSWORD=${HYP3_PASSWORD}
+      - ERA5_KEY=${ERA5_KEY}
     volumes:
       # job_status
       - geodesk_jobs:/app/job_status
