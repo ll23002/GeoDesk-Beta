@@ -8,8 +8,11 @@ import urllib.parse
 from typing import Any, Iterable, List, Optional, Tuple, Dict
 from datetime import datetime, timezone
 import requests
+from fastapi import Depends
+from utils.jwt_auth import require_admin, TokenData
 from dateutil import parser
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from utils.jwt_auth import require_admin, TokenData
 from pydantic import BaseModel, Field
 import asf_search as asf
 from asf_search import ASFSession
@@ -346,7 +349,7 @@ def pick_session_for(url: str) -> requests.Session:
 
 
 @router.post("/api/update-project-name")
-def api_update_project_name(new_name: str):
+def api_update_project_name(new_name: str, current_user: TokenData = Depends(require_admin)):
     update_project_name(new_name)
     return {"ok": True, "new_name": new_name}
 
@@ -355,7 +358,7 @@ def health():
     return {"ok": True, "service": "Sentinel-1 HyP3 API"}
 
 @router.post("/api/discover_paths", response_model=List[PathFrameOption])
-def api_discover_paths(params: DiscoverPathsRequest):
+def api_discover_paths(params: DiscoverPathsRequest, current_user: TokenData = Depends(require_admin)):
     """Search ASF without path/frame filters and return every unique
     (ruta, marco) combination found in the results, with each combination's
     aggregate bounding box and a flag for the preferred default."""
@@ -432,7 +435,7 @@ def api_discover_paths(params: DiscoverPathsRequest):
 
 
 @router.post("/api/search", response_model=List[SceneOut])
-def api_search(params: SearchParams):
+def api_search(params: SearchParams, current_user: TokenData = Depends(require_admin)):
     try:
         res = search_scenes(params)
         out: List[SceneOut] = []
@@ -458,6 +461,7 @@ def api_search(params: SearchParams):
 @router.post("/api/submit", response_model=SubmitResponse)
 def api_submit(
     body: SubmitRequest,
+    current_user: TokenData = Depends(require_admin),
     x_hyp3_username: Optional[str] = Header(default=None),
     x_hyp3_password: Optional[str] = Header(default=None),
 ):
@@ -492,6 +496,7 @@ def api_submit(
 @router.post("/api/submit-from-granules", response_model=SubmitResponse)
 def api_submit_from_granules(
     body: SubmitFromGranulesBody,
+    current_user: TokenData = Depends(require_admin),
     x_hyp3_username: Optional[str] = Header(default=None),
     x_hyp3_password: Optional[str] = Header(default=None),
 ):
@@ -553,6 +558,7 @@ def api_submit_from_granules(
 
 @router.get("/api/projects")
 def get_projects(
+    current_user: TokenData = Depends(require_admin),
     x_hyp3_username: Optional[str] = Header(default=None),
     x_hyp3_password: Optional[str] = Header(default=None),
 ):
@@ -583,6 +589,7 @@ def get_projects(
 @router.post("/api/project-files", response_model=List[JobFile]) # usado
 def get_project_files(
     body: ProjectFileDownloadRequest,
+    current_user: TokenData = Depends(require_admin),
     x_hyp3_username: Optional[str] = Header(default=None),
     x_hyp3_password: Optional[str] = Header(default=None),
 ):
@@ -641,7 +648,7 @@ def get_project_files(
 
 
 @router.post("/api/download")
-def api_download(body: DownloadBody):
+def api_download(body: DownloadBody, current_user: TokenData = Depends(require_admin)):
     try:
         downloads_dir = ensure_dir(pathlib.Path(__file__).resolve().parent.parent / "alaska_descargas")
         sess = requests.Session()

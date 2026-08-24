@@ -1,114 +1,101 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api from "../services/api";
 
-export interface Credentials {
+// Credenciales externas (HyP3 / ERA5) — personales del investigador, no de GeoDesk
+export interface ExternalCredentials {
   hyp3Username: string;
   hyp3Password: string;
   era5Key: string;
 }
 
-type AuthMode = "authenticated" | "guest" | "unauthenticated";
-
 interface AuthContextValue {
-  mode: AuthMode;
-  credentials: Credentials | null;
   isAuthenticated: boolean;
-  isGuest: boolean;
   isAdmin: boolean;
   username: string | null;
   jwtToken: string | null;
-  login: (creds: Credentials) => Promise<void>;
-  enterAsGuest: () => void;
+  externalCreds: ExternalCredentials | null;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
-  loginAdmin: (username: string, password: string) => Promise<void>;
-  logoutAdmin: () => void;
+  saveExternalCreds: (creds: ExternalCredentials) => void;
+  clearExternalCreds: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const STORAGE_KEY = "geodesk_credentials";
+
 const JWT_STORAGE_KEY = "geodesk_jwt_token";
+const EXT_CREDS_KEY   = "geodesk_external_creds";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<AuthMode>("unauthenticated");
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [jwtToken, setJwtToken] = useState<string | null>(null);
+  const [jwtToken, setJwtToken]         = useState<string | null>(null);
+  const [username, setUsername]         = useState<string | null>(null);
+  const [externalCreds, setExternalCreds] = useState<ExternalCredentials | null>(null);
 
+  // Restaurar sesión desde localStorage al arrancar
   useEffect(() => {
-    // Restore HyP3 credentials from localStorage
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: Credentials = JSON.parse(stored);
-        if (parsed.hyp3Username && parsed.hyp3Password) {
-          setCredentials(parsed);
-          setMode("authenticated");
-        }
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-
-    // Restore JWT token from localStorage
     try {
       const storedJwt = localStorage.getItem(JWT_STORAGE_KEY);
       if (storedJwt) {
         setJwtToken(storedJwt);
+        // Decodificar el payload del JWT para obtener el username (sin verificar firma)
+        try {
+          const payload = JSON.parse(atob(storedJwt.split(".")[1]));
+          setUsername(payload.sub ?? null);
+        } catch {
+          // Si falla la decodificación, ignora
+        }
       }
     } catch {
       localStorage.removeItem(JWT_STORAGE_KEY);
     }
+
+    try {
+      const storedCreds = localStorage.getItem(EXT_CREDS_KEY);
+      if (storedCreds) {
+        setExternalCreds(JSON.parse(storedCreds));
+      }
+    } catch {
+      localStorage.removeItem(EXT_CREDS_KEY);
+    }
   }, []);
 
-  const login = useCallback(async (creds: Credentials) => {
-    await api.post("/api/auth/login", {
-      hyp3_username: creds.hyp3Username,
-      hyp3_password: creds.hyp3Password,
-      era5_key: creds.era5Key || undefined,
-    });
-    setCredentials(creds);
-    setMode("authenticated");
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
-  }, []);
-
-  const enterAsGuest = useCallback(() => {
-    setCredentials(null);
-    setMode("guest");
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
-
-  const logout = useCallback(() => {
-    setCredentials(null);
-    setMode("unauthenticated");
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
-
-  const loginAdmin = useCallback(async (username: string, password: string) => {
-    const res = await api.post('/api/auth/admin/login', { username, password });
+  const login = useCallback(async (user: string, password: string) => {
+    const res = await api.post("/api/auth/admin/login", { username: user, password });
     const token: string = res.data.access_token;
+    const returnedUser: string = res.data.username ?? user;
     setJwtToken(token);
+    setUsername(returnedUser);
     localStorage.setItem(JWT_STORAGE_KEY, token);
   }, []);
 
-  const logoutAdmin = useCallback(() => {
+  const logout = useCallback(() => {
     setJwtToken(null);
+    setUsername(null);
     localStorage.removeItem(JWT_STORAGE_KEY);
+    // Las credenciales externas se mantienen entre sesiones para comodidad
+  }, []);
+
+  const saveExternalCreds = useCallback((creds: ExternalCredentials) => {
+    setExternalCreds(creds);
+    localStorage.setItem(EXT_CREDS_KEY, JSON.stringify(creds));
+  }, []);
+
+  const clearExternalCreds = useCallback(() => {
+    setExternalCreds(null);
+    localStorage.removeItem(EXT_CREDS_KEY);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        mode,
-        credentials,
-        isAuthenticated: mode === "authenticated",
-        isGuest: mode === "guest",
+        isAuthenticated: jwtToken !== null,
         isAdmin: jwtToken !== null,
-        username: credentials?.hyp3Username ?? null,
+        username,
         jwtToken,
+        externalCreds,
         login,
-        enterAsGuest,
         logout,
-        loginAdmin,
-        logoutAdmin,
+        saveExternalCreds,
+        clearExternalCreds,
       }}
     >
       {children}

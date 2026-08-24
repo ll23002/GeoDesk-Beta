@@ -1,32 +1,31 @@
 import React, { useState } from "react";
-import { Layers, LogIn, UserX, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
+import { Layers, LogIn, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import "./LoginPage.scss";
 
 const LoginPage: React.FC = () => {
-  const { login, enterAsGuest } = useAuth();
+  const { login } = useAuth();
 
-  const [hyp3Username, setHyp3Username] = useState("");
-  const [hyp3Password, setHyp3Password] = useState("");
-  const [era5Key, setEra5Key] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hyp3Username || !hyp3Password) {
-      setError("El usuario y contraseña de HyP3 son obligatorios.");
+    if (!username || !password) {
+      setError("El usuario y contraseña son obligatorios.");
       return;
     }
     try {
       setLoading(true);
       setError(null);
-      await login({ hyp3Username, hyp3Password, era5Key });
+      await login(username, password);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        "Error al conectar con el servidor. Verifica que el backend esté activo.";
+        "Credenciales incorrectas o servidor no disponible.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -54,8 +53,7 @@ const LoginPage: React.FC = () => {
         <div className="login-card__divider" />
 
         <p className="login-card__description">
-          Ingresa tus credenciales personales de <strong>HyP3</strong> (Alaska Satellite Facility)
-          y tu clave de <strong>ERA5</strong> (Copernicus Climate) para acceder a todas las funciones.
+          Ingresa tus credenciales de <strong>GeoDesk</strong> para acceder a la plataforma.
         </p>
 
         {/* Error banner */}
@@ -70,39 +68,39 @@ const LoginPage: React.FC = () => {
         <form className="login-form" onSubmit={handleLogin} noValidate>
           <fieldset className="login-form__section">
             <legend className="login-form__section-title">
-              <span className="login-form__badge login-form__badge--hyp3">HyP3</span>
-              Alaska Satellite Facility
+              <span className="login-form__badge login-form__badge--hyp3">GeoDesk</span>
+              Acceso a la plataforma
             </legend>
 
             <div className="login-form__field">
-              <label htmlFor="hyp3-username" className="login-form__label">
-                Usuario / Email
+              <label htmlFor="geodesk-username" className="login-form__label">
+                Usuario
               </label>
               <input
-                id="hyp3-username"
+                id="geodesk-username"
                 type="text"
                 className="login-form__input"
-                placeholder="usuario@ejemplo.com"
+                placeholder="nombre de usuario"
                 autoComplete="username"
-                value={hyp3Username}
-                onChange={(e) => setHyp3Username(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
               />
             </div>
 
             <div className="login-form__field">
-              <label htmlFor="hyp3-password" className="login-form__label">
+              <label htmlFor="geodesk-password" className="login-form__label">
                 Contraseña
               </label>
               <div className="login-form__input-wrap">
                 <input
-                  id="hyp3-password"
+                  id="geodesk-password"
                   type={showPassword ? "text" : "password"}
                   className="login-form__input login-form__input--password"
                   placeholder="••••••••••"
                   autoComplete="current-password"
-                  value={hyp3Password}
-                  onChange={(e) => setHyp3Password(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                 />
                 <button
@@ -114,32 +112,6 @@ const LoginPage: React.FC = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-            </div>
-          </fieldset>
-
-          <fieldset className="login-form__section">
-            <legend className="login-form__section-title">
-              <span className="login-form__badge login-form__badge--era5">ERA5</span>
-              Copernicus Climate Data Store
-              <span className="login-form__optional">Opcional</span>
-            </legend>
-
-            <div className="login-form__field">
-              <label htmlFor="era5-key" className="login-form__label">
-                API Key
-              </label>
-              <input
-                id="era5-key"
-                type="text"
-                className="login-form__input login-form__input--mono"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                value={era5Key}
-                onChange={(e) => setEra5Key(e.target.value)}
-                disabled={loading}
-              />
-              <p className="login-form__hint">
-                Solo requerida para la corrección troposférica en Análisis InSAR (MintPy).
-              </p>
             </div>
           </fieldset>
 
@@ -163,26 +135,8 @@ const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Guest entry */}
-        <div className="login-card__divider login-card__divider--text">
-          <span>o</span>
-        </div>
-
-        <button
-          id="guest-entry-btn"
-          type="button"
-          className="login-btn login-btn--ghost"
-          onClick={enterAsGuest}
-          disabled={loading}
-        >
-          <UserX size={18} />
-          Entrar de todas formas
-        </button>
-
-        <p className="login-card__guest-note">
-          Podrás acceder a <strong>EQ-INSAR Sintético</strong> y a{" "}
-          <strong>Análisis InSAR</strong> con funciones limitadas. Las demás secciones
-          requerirán iniciar sesión.
+        <p className="login-card__guest-note" style={{ marginTop: "1.25rem" }}>
+          ¿No tienes cuenta? Solicita acceso al administrador de GeoDesk.
         </p>
       </div>
     </div>

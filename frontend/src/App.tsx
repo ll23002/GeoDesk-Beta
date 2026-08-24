@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Navbar from "./components/Navbar";
 import BarraSuperior from "./components/BarraSuperior";
 import JobStatusPanel from "./components/JobStatusPanel";
-
+import CredentialsSettingsModal from "./components/CredentialsSettingsModal";
 
 import AlaskaSearch from "./pages/Alaska/AlaskaSearch";
 import type { PathFrameOption } from "./pages/Alaska/MapComponent";
@@ -18,130 +18,18 @@ import LoginPage from "./pages/Login/LoginPage";
 import api, { API_URL } from "./services/api";
 import type { Scene } from "./pages/Alaska/AlaskaContent";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { AlertTriangle, LogIn, X } from "lucide-react";
 
 const SIDEBAR_WIDTH = 300;
 const APP_BG = "var(--color-bg-main)";
 
-const AUTH_REQUIRED_SECTIONS = new Set([
-  "solicitud-imagenes",
-  "solicitud-automatico",
-  "descarga-imagenes",
-  "alaska",
-]);
 
-const GUEST_PARTIAL_SECTIONS = new Set(["mintpy-analysis"]);
-
-interface WarningBannerProps {
-  message: string;
-  onDismiss: () => void;
-}
-
-const WarningBanner: React.FC<WarningBannerProps> = ({ message, onDismiss }) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "flex-start",
-      gap: "0.75rem",
-      background: "rgba(234, 179, 8, 0.1)",
-      border: "1px solid rgba(234, 179, 8, 0.3)",
-      borderRadius: "var(--radius-md)",
-      padding: "0.9rem 1rem",
-      marginBottom: "1.25rem",
-      color: "#fde047",
-      fontSize: "0.85rem",
-      lineHeight: 1.5,
-    }}
-  >
-    <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1, color: "#facc15" }} />
-    <span style={{ flex: 1 }}>{message}</span>
-    <button
-      onClick={onDismiss}
-      style={{
-        background: "none",
-        border: "none",
-        color: "#fde047",
-        cursor: "pointer",
-        padding: "2px",
-        display: "flex",
-        flexShrink: 0,
-        opacity: 0.7,
-      }}
-      aria-label="Cerrar aviso"
-    >
-      <X size={16} />
-    </button>
-  </div>
-);
-
-const AuthBlocker: React.FC<{ onGoToLogin: () => void }> = ({ onGoToLogin }) => (
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "60vh",
-      gap: "1.5rem",
-      textAlign: "center",
-      padding: "2rem",
-    }}
-  >
-    <div
-      style={{
-        width: 72,
-        height: 72,
-        borderRadius: "var(--radius-lg)",
-        background: "rgba(239, 68, 68, 0.1)",
-        border: "1px solid rgba(239, 68, 68, 0.2)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <AlertTriangle size={36} color="#f87171" />
-    </div>
-    <div>
-      <h2 style={{ margin: "0 0 0.5rem", color: "var(--color-text-main)", fontSize: "1.2rem" }}>
-        Acceso restringido
-      </h2>
-      <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "0.9rem", maxWidth: 380 }}>
-        Esta sección requiere credenciales de <strong style={{ color: "var(--color-text-main)" }}>HyP3</strong>.
-        Inicia sesión para continuar.
-      </p>
-    </div>
-    <button
-      id="auth-blocker-login-btn"
-      onClick={onGoToLogin}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.6rem",
-        padding: "0.7rem 1.5rem",
-        background: "linear-gradient(135deg, var(--color-primary) 0%, #00b4d8 100%)",
-        color: "#020617",
-        border: "none",
-        borderRadius: "var(--radius-md)",
-        fontFamily: "var(--font-family)",
-        fontSize: "0.9rem",
-        fontWeight: 600,
-        cursor: "pointer",
-        boxShadow: "0 0 20px rgba(0, 229, 255, 0.25)",
-        transition: "all 0.2s",
-      }}
-    >
-      <LogIn size={18} />
-      Iniciar Sesión
-    </button>
-  </div>
-);
 
 const AppInner: React.FC = () => {
-  const { mode, isGuest } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [activeSection, setActiveSection] = useState<string>("inicio");
   const [, setActivePage] = useState<string>("");
   const [isHeaderHidden, setIsHeaderHidden] = useState<boolean>(false);
-  const [showWarningBanner, setShowWarningBanner] = useState(false);
+  const [showCredsModal, setShowCredsModal] = useState(false);
 
   const contentRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef<number>(0);
@@ -161,20 +49,8 @@ const AppInner: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastCount, setLastCount] = useState<number>(0);
 
-  // ── Navigation with access control ─────────────────────────────────────────
+  // ── Navigation ──────────────────────────────────────────────────────────────
   const handleChangeSection = (section: string) => {
-    // Guest trying to access auth-required section → show blocker
-    if (isGuest && AUTH_REQUIRED_SECTIONS.has(section)) {
-      setActiveSection("login-redirect");
-      setActivePage("");
-      return;
-    }
-
-    // Guest accessing mintpy → show banner, allow access
-    if (isGuest && GUEST_PARTIAL_SECTIONS.has(section)) {
-      setShowWarningBanner(true);
-    }
-
     setActiveSection(section);
     setActivePage("");
   };
@@ -298,20 +174,14 @@ const AppInner: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (activeSection === "login-redirect") {
-      return <AuthBlocker onGoToLogin={() => setActiveSection("inicio")} />;
-    }
-
     switch (activeSection) {
       case "inicio":
         return <Inicio onNavigate={handleChangeSection} />;
 
       case "alaska":
-        if (isGuest) return <AuthBlocker onGoToLogin={() => setActiveSection("inicio")} />;
         return <div>Sección Alaska (elige una opción del submenú)</div>;
 
       case "solicitud-imagenes":
-        if (isGuest) return <AuthBlocker onGoToLogin={() => setActiveSection("inicio")} />;
         return (
           <div>
             <AlaskaSearch
@@ -351,28 +221,19 @@ const AppInner: React.FC = () => {
         );
 
       case "descarga-imagenes":
-        if (isGuest) return <AuthBlocker onGoToLogin={() => setActiveSection("inicio")} />;
         return <div><DownloadFiles /></div>;
 
       case "solicitud-automatico":
-        if (isGuest) return <AuthBlocker onGoToLogin={() => setActiveSection("inicio")} />;
         return <div><SolicitarImagenesAutomatico /></div>;
 
       case "mintpy-analysis":
         return (
           <div style={{ height: "100%", overflowY: "auto" }}>
-            {isGuest && showWarningBanner && (
-              <WarningBanner
-                message="Modo invitado: el paso de corrección troposférica con ERA5 no estará disponible. Para acceso completo, inicia sesión con tus credenciales."
-                onDismiss={() => setShowWarningBanner(false)}
-              />
-            )}
             <MintPyAnalysis />
           </div>
         );
 
       case "eq-insar":
-        // EQ-INSAR is always accessible (no external credentials needed)
         return (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <EqInsarAnalysis />
@@ -384,7 +245,7 @@ const AppInner: React.FC = () => {
     }
   };
 
-  if (mode === "unauthenticated") {
+  if (!isAuthenticated) {
     return <LoginPage />;
   }
 
@@ -404,8 +265,10 @@ const AppInner: React.FC = () => {
       </div>
 
       <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
-        <BarraSuperior isHidden={isHeaderHidden} />
+        <BarraSuperior isHidden={isHeaderHidden} onOpenSettings={() => setShowCredsModal(true)} />
       </div>
+
+      <CredentialsSettingsModal isOpen={showCredsModal} onClose={() => setShowCredsModal(false)} />
 
       <div
         ref={contentRef}

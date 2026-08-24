@@ -9,6 +9,8 @@ import pyproj
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+from fastapi import Depends
+from utils.jwt_auth import require_admin, TokenData
 import warnings
 
 from PIL.ImageOps import scale
@@ -20,7 +22,8 @@ import mintpy.ifgram_inversion as inv
 import numpy as np
 import pandas as pd
 import rasterio
-from fastapi import APIRouter, File, Header, HTTPException, UploadFile, Form
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, Form
+from utils.jwt_auth import require_admin, TokenData
 from fastapi.responses import FileResponse
 import rasterio.warp
 from rasterio.windows import Window
@@ -186,7 +189,7 @@ def generate_phase_previews(active_work_dir: Path, active_zip_dir: Path, igram_m
     return preview_info
 
 @router.post("/upload_file")
-async def upload_file(session_id: str = Form(...), file: UploadFile = File(...)):
+async def upload_file(session_id: str = Form(...), file: UploadFile = File(...), current_user: TokenData = Depends(require_admin)):
     if not session_id:
         raise HTTPException(status_code=400, detail="Falta session_id.")
         
@@ -210,7 +213,7 @@ async def upload_file(session_id: str = Form(...), file: UploadFile = File(...))
     return {"success": True, "filename": file.filename}
 
 @router.post("/clear_session")
-async def clear_session(session_id: str = Form(...)):
+async def clear_session(session_id: str = Form(...), current_user: TokenData = Depends(require_admin)):
     if session_id:
         session_dir = SESSION_BASE / session_id
         if session_dir.exists():
@@ -1287,6 +1290,7 @@ async def process_interferograms(
     selected_mode: str = Form(None),
     min_coherence: float = Form(0.6),
     x_era5_key: Optional[str] = Header(default=None),
+    current_user: TokenData = Depends(require_admin),
 ):
     session_dir = SESSION_BASE / session_id
     zips = list(session_dir.glob("*.zip"))
@@ -1894,6 +1898,7 @@ async def preview_reference(
         crop_lat_max: float = Form(None),
         crop_lon_min: float = Form(None),
         crop_lon_max: float = Form(None),
+        current_user: TokenData = Depends(require_admin),
 ):
     """Generates a preview of optimal reference points for MintPy from ZIP files containing interferograms.
 
@@ -2194,7 +2199,7 @@ def export_xlsx_hyp3():
 
 
 @router.post("/preview_bounds")
-async def preview_bounds(session_id: str = Form(...)):
+async def preview_bounds(session_id: str = Form(...), current_user: TokenData = Depends(require_admin)):
     """Extracts geographic bounds from the first HyP3 interferogram ZIP file.
 
     Processes the first uploaded ZIP file containing HyP3 interferogram products,
@@ -2273,7 +2278,7 @@ async def preview_bounds(session_id: str = Form(...)):
         shutil.rmtree(work_dir, ignore_errors=True)
 
 @router.post("/preview_plan")
-async def preview_plan(session_id: str = Form(...)):
+async def preview_plan(session_id: str = Form(...), current_user: TokenData = Depends(require_admin)):
     session_dir = SESSION_BASE / session_id
     zips = list(session_dir.glob("*.zip"))
     if not zips:

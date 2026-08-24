@@ -7,7 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends
+from utils.jwt_auth import require_admin, TokenData
+from fastapi import APIRouter, Depends, HTTPException
+from utils.jwt_auth import require_admin, TokenData
 from pydantic import BaseModel
 
 from tasks.processing_tasks import (
@@ -87,7 +90,7 @@ def _write_initial_status(job_id: str, task_type: str) -> None:
 
 
 @router.post("/mintpy/run", status_code=202)
-def enqueue_mintpy_pipeline(body: MintpyRunRequest): # falta JWT auth
+def enqueue_mintpy_pipeline(body: MintpyRunRequest, current_user: TokenData = Depends(require_admin)):
     """
     Retorna HTTP 202 Accepted inmediatamente con el job_id.
     El frontend guarda el job_id en localStorage y consulta /status cada 10 s.
@@ -127,7 +130,7 @@ def enqueue_mintpy_pipeline(body: MintpyRunRequest): # falta JWT auth
 
 
 @router.post("/adhoc/run", status_code=202)
-def enqueue_adhoc_analysis(body: AdhocRunRequest): # falta JWT auth
+def enqueue_adhoc_analysis(body: AdhocRunRequest, current_user: TokenData = Depends(require_admin)):
     """
     Encola un análisis InSAR ad-hoc en un sandbox temporal aislado.
     Los resultados se empaquetan en un .zip descargable por el usuario.
@@ -187,7 +190,7 @@ def disk_status():
 
 
 @router.post("/adhoc/{session_id}/cleanup")
-def cleanup_adhoc_session(session_id: str):
+def cleanup_adhoc_session(session_id: str, current_user: TokenData = Depends(require_admin)):
     """
     Elimina manualmente el sandbox de una sesión ad-hoc y libera el espacio
     del servidor.

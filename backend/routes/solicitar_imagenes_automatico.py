@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Tuple, Iterable  # Importa Iterable
 from datetime import datetime, timezone
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends, Header
+from utils.jwt_auth import require_admin, TokenData
 import os
 import re
 import logging
@@ -274,6 +275,7 @@ def solicitar_imagenes_automatico(
     payload: SolicitudAutoIn,
     x_hyp3_username: Optional[str] = Header(default=None),
     x_hyp3_password: Optional[str] = Header(default=None),
+    current_user: TokenData = Depends(require_admin),
 ) -> Dict[str, Any]:
     project_name = _sanear_nombre_proyecto(payload.project_name)
     base_dir = payload.output_folder or CARPETA_BASE_SALIDA

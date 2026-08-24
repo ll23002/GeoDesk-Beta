@@ -8,9 +8,7 @@ import {
   Activity,
   Zap,
   LogOut,
-  LogIn,
   ShieldCheck,
-  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -40,7 +38,7 @@ type ItemProps = {
 
 export default function Navbar({ activeSection, onChangeSection }: NavbarProps) {
   const [isAlaskaOpen, setIsAlaskaOpen] = useState(false);
-  const { isAuthenticated, isGuest, username, logout } = useAuth();
+  const { isAuthenticated, username, logout } = useAuth();
 
   const handleKey = (section: string, toggleSubmenu?: () => void) => (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -197,25 +195,6 @@ export default function Navbar({ activeSection, onChangeSection }: NavbarProps) 
             >
               <LogOut size={14} />
               Cerrar sesión
-            </button>
-          </>
-        ) : isGuest ? (
-          <>
-            <div className="sidebar__session-row">
-              <ShieldAlert size={15} className="sidebar__session-icon sidebar__session-icon--warn" />
-              <div className="sidebar__session-info">
-                <span className="sidebar__session-label">Modo invitado</span>
-                <span className="sidebar__session-user">Acceso limitado</span>
-              </div>
-            </div>
-            <button
-              id="navbar-login-btn"
-              className="sidebar__session-btn sidebar__session-btn--login"
-              onClick={logout}
-              aria-label="Iniciar sesión"
-            >
-              <LogIn size={14} />
-              Iniciar sesión
             </button>
           </>
         ) : null}
