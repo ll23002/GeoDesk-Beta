@@ -50,6 +50,7 @@ services:
       celery
       --app=celery_app.celery_app
       worker
+      -B
       --queues=geodesk_heavy
       --concurrency=5
       --loglevel=INFO
