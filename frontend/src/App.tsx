@@ -25,7 +25,7 @@ const APP_BG = "var(--color-bg-main)";
 
 
 const AppInner: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, externalCreds } = useAuth();
   const [activeSection, setActiveSection] = useState<string>("inicio");
   const [, setActivePage] = useState<string>("");
   const [isHeaderHidden, setIsHeaderHidden] = useState<boolean>(false);
@@ -33,6 +33,13 @@ const AppInner: React.FC = () => {
 
   const contentRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef<number>(0);
+
+  // Auto-open credentials modal if missing after login
+  useEffect(() => {
+    if (isAuthenticated && !externalCreds) {
+      setShowCredsModal(true);
+    }
+  }, [isAuthenticated, externalCreds]);
 
   const [polygonWKT, setPolygonWKT] = useState<string>("");
   const [startDate, setStartDate] = useState("2025-01-01");
