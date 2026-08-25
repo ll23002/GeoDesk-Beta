@@ -33,7 +33,9 @@ if not _env_secret:
 SECRET_KEY: str = _env_secret
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-ADMIN_USERS_FILE = BASE_DIR / "admin_users.json"
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+ADMIN_USERS_FILE = DATA_DIR / "admin_users.json"
 
 # Esquema OAuth2 para Swagger UI y headers Authorization: Bearer <token>
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)

@@ -36,6 +36,8 @@ services:
       - geodesk_downloads:/app/alaska_descargas
       # Sesiones ad-hoc
       - geodesk_adhoc:/tmp/geodesk_adhoc_sessions
+      # DB usuarios
+      - geodesk_data:/app/data
     cpuset: "5,6,7"
     expose:
       - "8000"
@@ -97,3 +99,4 @@ volumes:
   geodesk_results:
   geodesk_downloads:
   geodesk_adhoc:
+  geodesk_data:
