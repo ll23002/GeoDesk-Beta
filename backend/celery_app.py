@@ -1,5 +1,7 @@
 import os
+import resource
 from celery import Celery
+from celery.signals import worker_process_init
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +25,7 @@ celery_app.conf.update(
     timezone="America/El_Salvador",
     enable_utc=True,
 
-    worker_concurrency=5,
+    worker_concurrency=3,
     worker_prefetch_multiplier=1, # 1 tarea por proceso para evitar starvation
 
     task_default_queue="geodesk_heavy",
@@ -35,8 +37,9 @@ celery_app.conf.update(
 
     result_expires=86400 * 7, # por que tanto tiempo?
 
-    # Si un proceso hijo supera 11 GB de RAM, Celery lo reinicia limpiamente
-    worker_max_memory_per_child=11 * 1024 * 1024,  # 11 GB en KB
+    # Si un proceso hijo supera 2 GB de RAM, Celery lo reinicia limpiamente al terminar la tarea
+    # Con concurrencia=3, el techo total es ~6 GB
+    worker_max_memory_per_child=2 * 1024 * 1024,  # 2 GB en KB
 
     task_acks_late=True,
     task_reject_on_worker_lost=True,
@@ -55,3 +58,12 @@ celery_app.conf.update(
         }
     }
 )
+
+@worker_process_init.connect
+def limit_worker_memory(**kwargs):
+    """Limita la memoria virtual de cada proceso hijo a 2 GB.
+    Si una tarea intenta asignar más, Python lanza MemoryError
+    en lugar de que Docker mate el contenedor entero.
+    """
+    soft = 2 * 1024 ** 3  # 2 GB en bytes
+    resource.setrlimit(resource.RLIMIT_AS, (soft, soft))

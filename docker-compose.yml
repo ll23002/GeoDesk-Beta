@@ -57,7 +57,7 @@ services:
       worker
       -B
       --queues=geodesk_heavy
-      --concurrency=5
+      --concurrency=3
       --loglevel=INFO
     environment:
       - PYTHONUNBUFFERED=1
@@ -72,8 +72,8 @@ services:
       - geodesk_downloads:/app/alaska_descargas
       - geodesk_adhoc:/tmp/geodesk_adhoc_sessions
     cpuset: "0,1,2,3,4"
-    mem_limit: 12g
-    memswap_limit: 12g
+    mem_limit: 7g
+    memswap_limit: 7g
     depends_on:
       redis:
         condition: service_healthy
