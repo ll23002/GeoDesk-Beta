@@ -54,7 +54,7 @@ celery_app.conf.update(
         },
         "verificar-historico-arranque": {
             "task": "tasks.orchestrator.bootstrap_historical",
-            "schedule": 300.0, 
+            "schedule": crontab(hour="6", minute="0"),  # Una vez al día a las 6am
         }
     }
 )
