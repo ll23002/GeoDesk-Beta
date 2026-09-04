@@ -9,7 +9,9 @@ from tasks.automated_pipeline import (
     pipeline_submit_hyp3,
     pipeline_wait_and_download,
     pipeline_run_mintpy,
-    pipeline_finalize_and_cleanup
+    pipeline_finalize_and_cleanup,
+    _get_redis,
+    _pipeline_lock_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,19 +25,37 @@ def _pipeline_task_id(volcano: str, year: int) -> str:
 
 
 def _is_pipeline_running(volcano: str, year: int) -> bool:
-    """Retorna True si ya existe una tarea activa/pendiente para este (volcán, año)."""
+    """Retorna True si ya existe un pipeline activo para este (volcano, year).
+
+    Usa el lock distribuido de Redis como fuente de verdad principal.
+    El lock es establecido por pipeline_submit_hyp3 al comenzar y liberado
+    solo al finalizar o fallar inesperadamente, por lo que su presencia
+    garantiza que hay un pipeline vivo para este par.
+    """
+    r = _get_redis()
+    lock_key = _pipeline_lock_key(volcano, year)
+    if r.exists(lock_key):
+        return True
+
+    # Fallback: verificar estado Celery por el ID determinístico
+    # (cubre el breve instante entre encolar y que el worker adquiera el lock)
     task_id = _pipeline_task_id(volcano, year)
     result = AsyncResult(task_id)
-    # PENDING puede significar "no existe", pero combinado con el ID determinístico
-    # es suficiente: si la tarea fue encolada con ese ID, su estado no será PENDING.
-    return result.state in ("STARTED", "RECEIVED", "RETRY")
+    return result.state in ("STARTED", "RECEIVED", "RETRY", "PENDING")
 
 
 def _launch_pipeline_for(volcano: str, year: int, start_iso: str, end_iso: str):
     """Encola la cadena de tareas para un volcán y un año específico.
     Usa un task_id determinístico para que Celery descarte automáticamente
     cualquier intento de encolar la misma tarea dos veces.
+    También verifica el lock de Redis como segunda barrera de seguridad.
     """
+    # Doble chequeo antes de encolar: evita race conditions entre la
+    # verificación en bootstrap_historical y el momento de encolar.
+    if _is_pipeline_running(volcano, year):
+        logger.info(f"Orquestador: Pipeline para {volcano}-{year} ya activo (doble chequeo). Omitiendo.")
+        return
+
     logger.info(f"Orquestador: Lanzando pipeline para {volcano} ({year})")
 
     task_id = _pipeline_task_id(volcano, year)
